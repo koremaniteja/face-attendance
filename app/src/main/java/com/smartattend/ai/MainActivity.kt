@@ -37,16 +37,21 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Class
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -135,6 +140,15 @@ private fun LoginScreen(onLogin: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Text("SmartAttend", color = Navy, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text("AI-powered attendance, made simple", color = Color(0xFF627D98), fontSize = 15.sp)
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.clip(CircleShape).background(PaleGreen).padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.CloudDone, null, tint = Green, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Secure and ready for your class", color = Green, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        }
         Spacer(Modifier.height(42.dp))
         OutlinedTextField(email, { email = it }, label = { Text("Email address") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(14.dp))
@@ -180,8 +194,20 @@ private fun AttendanceApp(onSignOut: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("SmartAttend", color = Navy, fontWeight = FontWeight.Bold) },
-                actions = { IconButton(onClick = onSignOut) { Icon(Icons.Default.Person, "Profile", tint = Blue) } },
+                title = {
+                    Column {
+                        Text("SmartAttend", color = Navy, fontWeight = FontWeight.Bold)
+                        Text("Professor workspace", color = Color(0xFF829AB1), fontSize = 11.sp)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {}) { Icon(Icons.Default.Notifications, "Notifications", tint = Navy) }
+                    IconButton(onClick = onSignOut) {
+                        Box(Modifier.size(34.dp).clip(CircleShape).background(PaleBlue), contentAlignment = Alignment.Center) {
+                            Text("PS", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF7F9FC))
             )
         },
@@ -232,6 +258,11 @@ private fun HomeScreen(
         item {
             Text("Good morning, Professor", color = Color(0xFF627D98), fontSize = 14.sp)
             Text("Ready to take attendance?", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CalendarMonth, null, tint = Blue, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("Tuesday, September 2, 2026", color = Color(0xFF829AB1), fontSize = 12.sp)
+            }
             Spacer(Modifier.height(16.dp))
             Card(colors = CardDefaults.cardColors(containerColor = Blue), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -251,6 +282,48 @@ private fun HomeScreen(
                 StatCard("Classes", "04", "Active", PaleOrange, Orange, Modifier.weight(1f))
             }
         }
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(18.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Weekly performance", color = Navy, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("Your classes are trending up", color = Color(0xFF627D98), fontSize = 12.sp)
+                        }
+                        Row(
+                            modifier = Modifier.clip(CircleShape).background(PaleGreen).padding(horizontal = 9.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.TrendingUp, null, tint = Green, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("+4.2%", color = Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.height(15.dp))
+                    Box(Modifier.fillMaxWidth().height(9.dp).clip(CircleShape).background(PaleBlue)) {
+                        Box(Modifier.fillMaxWidth(.864f).height(9.dp).clip(CircleShape).background(Blue))
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("86.4% attendance", color = Navy, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Target 90%", color = Color(0xFF829AB1), fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+        item {
+            Text("Quick tools", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QuickTool("Scan face", Icons.Default.Face, Blue, onScan, Modifier.weight(1f))
+                QuickTool("Schedule", Icons.Default.Schedule, Orange, onSchedule, Modifier.weight(1f))
+                QuickTool("History", Icons.Default.CheckCircle, Green, onHistory, Modifier.weight(1f))
+            }
+        }
         item { SectionTitle("Today’s schedule", "View all", onSchedule) }
         item { ScheduleCard("Data Structures", "CS - Semester 4", "09:00 AM", "Room 204", true, onClick = onSchedule) }
         item { ScheduleCard("Machine Learning", "AI - Semester 6", "11:30 AM", "Lab 3", false) }
@@ -258,12 +331,30 @@ private fun HomeScreen(
         item { ActivityRow("Attendance marked", "Data Structures • Just now", Icons.Default.CheckCircle, Green) }
         item { ActivityRow("New student enrolled", "Rohan Mehta • Yesterday", Icons.Default.Person, Blue) }
     }
+
 }
 
 @Composable
 private fun StatCard(title: String, value: String, subtitle: String, bg: Color, tint: Color, modifier: Modifier) {
     Card(modifier, colors = CardDefaults.cardColors(containerColor = bg), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(12.dp)) { Text(title, color = tint, fontSize = 11.sp); Text(value, color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold); Text(subtitle, color = Color(0xFF627D98), fontSize = 10.sp) }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun QuickTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, onClick: () -> Unit, modifier: Modifier) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = tint.copy(alpha = .09f)),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(Modifier.padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(23.dp))
+            Spacer(Modifier.height(7.dp))
+            Text(label, color = Navy, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
