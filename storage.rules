@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Allow read and write access to authenticated users
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /students/{studentId}/profile_photos/{photoId} {
+      allow read, write: if request.auth != null && request.auth.uid == studentId;
+    }
+    
+    // Allow access to other storage paths as needed
+    match /{allPaths=**} {
+      allow read, write: if false; // Deny access by default
+    }
+  }
+}
