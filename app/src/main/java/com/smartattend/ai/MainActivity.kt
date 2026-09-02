@@ -2,6 +2,7 @@ package com.smartattend.ai
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -166,6 +167,9 @@ private fun AttendanceApp(onSignOut: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.Home) }
     var showScanner by remember { mutableStateOf(false) }
     var showAddClass by remember { mutableStateOf(false) }
+    var showSchedule by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
+    var showExport by remember { mutableStateOf(false) }
     val students = remember {
         mutableStateListOf(
             Student("Aarav Sharma", "CS-001", true), Student("Ishita Patel", "CS-002", true),
@@ -197,18 +201,33 @@ private fun AttendanceApp(onSignOut: () -> Unit) {
         }
     ) { padding ->
         when (tab) {
-            Tab.Home -> HomeScreen(padding, students, onScan = { showScanner = true })
+            Tab.Home -> HomeScreen(
+                padding,
+                students,
+                onScan = { showScanner = true },
+                onSchedule = { showSchedule = true },
+                onHistory = { showHistory = true }
+            )
             Tab.Classes -> ClassesScreen(padding, onAdd = { showAddClass = true })
             Tab.Students -> StudentsScreen(padding, students)
-            Tab.Reports -> ReportsScreen(padding, students)
+            Tab.Reports -> ReportsScreen(padding, students, onExport = { showExport = true })
         }
     }
     if (showScanner) ScannerDialog(students) { showScanner = false }
     if (showAddClass) AddClassDialog { showAddClass = false }
+    if (showSchedule) ScheduleDialog { showSchedule = false }
+    if (showHistory) HistoryDialog { showHistory = false }
+    if (showExport) ExportDialog(students) { showExport = false }
 }
 
 @Composable
-private fun HomeScreen(padding: PaddingValues, students: List<Student>, onScan: () -> Unit) {
+private fun HomeScreen(
+    padding: PaddingValues,
+    students: List<Student>,
+    onScan: () -> Unit,
+    onSchedule: () -> Unit,
+    onHistory: () -> Unit
+) {
     LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = padding.calculateTopPadding() + 8.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Text("Good morning, Professor", color = Color(0xFF627D98), fontSize = 14.sp)
@@ -232,10 +251,10 @@ private fun HomeScreen(padding: PaddingValues, students: List<Student>, onScan: 
                 StatCard("Classes", "04", "Active", PaleOrange, Orange, Modifier.weight(1f))
             }
         }
-        item { SectionTitle("Today’s schedule", "View all") }
-        item { ScheduleCard("Data Structures", "CS - Semester 4", "09:00 AM", "Room 204", true) }
+        item { SectionTitle("Today’s schedule", "View all", onSchedule) }
+        item { ScheduleCard("Data Structures", "CS - Semester 4", "09:00 AM", "Room 204", true, onClick = onSchedule) }
         item { ScheduleCard("Machine Learning", "AI - Semester 6", "11:30 AM", "Lab 3", false) }
-        item { SectionTitle("Recent activity", "See history") }
+        item { SectionTitle("Recent activity", "See history", onHistory) }
         item { ActivityRow("Attendance marked", "Data Structures • Just now", Icons.Default.CheckCircle, Green) }
         item { ActivityRow("New student enrolled", "Rohan Mehta • Yesterday", Icons.Default.Person, Blue) }
     }
@@ -249,15 +268,21 @@ private fun StatCard(title: String, value: String, subtitle: String, bg: Color, 
 }
 
 @Composable
-private fun SectionTitle(title: String, action: String) {
+private fun SectionTitle(title: String, action: String, onAction: () -> Unit = {}) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold); TextButton(onClick = {}) { Text(action, color = Blue) }
+        Text(title, color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold); TextButton(onClick = onAction) { Text(action, color = Blue) }
     }
 }
 
 @Composable
-private fun ScheduleCard(name: String, course: String, time: String, room: String, active: Boolean) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ScheduleCard(name: String, course: String, time: String, room: String, active: Boolean, onClick: () -> Unit = {}) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(45.dp).clip(CircleShape).background(if (active) PaleBlue else PaleOrange), contentAlignment = Alignment.Center) { Icon(Icons.Default.MenuBook, null, tint = if (active) Blue else Orange) }
             Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(name, color = Navy, fontWeight = FontWeight.Bold); Text(course, color = Color(0xFF627D98), fontSize = 12.sp); Spacer(Modifier.height(4.dp)); Text("$time  •  $room", color = Color(0xFF829AB1), fontSize = 12.sp) }
@@ -293,11 +318,11 @@ private fun StudentsScreen(padding: PaddingValues, students: List<Student>) {
 }
 
 @Composable
-private fun ReportsScreen(padding: PaddingValues, students: List<Student>) {
+private fun ReportsScreen(padding: PaddingValues, students: List<Student>, onExport: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(20.dp, padding.calculateTopPadding() + 8.dp, 20.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("Reports", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("Track attendance trends", color = Color(0xFF627D98)) }
         item { Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) { Column(Modifier.padding(20.dp)) { Text("Overall attendance", color = Color(0xFF627D98)); Text("86.4%", color = Navy, fontSize = 34.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(14.dp)); Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(PaleBlue)) { Box(Modifier.fillMaxWidth(.864f).height(10.dp).clip(CircleShape).background(Blue)) }; Spacer(Modifier.height(8.dp)); Text("＋4.2% compared with last month", color = Green, fontSize = 12.sp) } } }
-        item { SectionTitle("Class attendance", "Export CSV") }
+        item { SectionTitle("Class attendance", "Export CSV", onExport) }
         item { ReportRow("Data Structures", "86%", students.count { it.present }, students.size) }
         item { ReportRow("Machine Learning", "91%", 33, 36) }
         item { ReportRow("Computer Networks", "82%", 33, 40) }
@@ -414,5 +439,104 @@ private fun analyzeFace(imageProxy: ImageProxy, detector: com.google.mlkit.visio
 @Composable
 private fun AddClassDialog(onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, confirmButton = { Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Blue)) { Text("Create class") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }, title = { Text("Create new class", color = Navy) }, text = { OutlinedTextField(name, { name = it }, label = { Text("Class name") }, singleLine = true) })
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                enabled = name.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+            ) { Text("Create class") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Create new class", color = Navy) },
+        text = { OutlinedTextField(name, { name = it }, label = { Text("Class name") }, singleLine = true) }
+    )
+}
+
+@Composable
+private fun ScheduleDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Blue)) { Text("Close") } },
+        title = { Text("Today’s schedule", color = Navy) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ScheduleDetail("09:00 AM", "Data Structures", "CS - Semester 4", "Room 204", true)
+                ScheduleDetail("11:30 AM", "Machine Learning", "AI - Semester 6", "Lab 3", false)
+                ScheduleDetail("02:00 PM", "Computer Networks", "CS - Semester 4", "Room 108", false)
+            }
+        }
+    )
+}
+
+@Composable
+private fun ScheduleDetail(time: String, name: String, course: String, room: String, active: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(10.dp).clip(CircleShape).background(if (active) Green else Color(0xFFCBD5E1))
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, color = Navy, fontWeight = FontWeight.SemiBold)
+            Text("$time  •  $room", color = Color(0xFF627D98), fontSize = 12.sp)
+            Text(course, color = Color(0xFF829AB1), fontSize = 11.sp)
+        }
+        if (active) Text("Now", color = Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun HistoryDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Blue)) { Text("Done") } },
+        title = { Text("Recent activity", color = Navy) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                ActivityRow("Attendance marked", "Data Structures • Just now", Icons.Default.CheckCircle, Green)
+                ActivityRow("New student enrolled", "Rohan Mehta • Yesterday", Icons.Default.Person, Blue)
+                ActivityRow("Class created", "Computer Networks • Monday", Icons.Default.Class, Orange)
+            }
+        }
+    )
+}
+
+@Composable
+private fun ExportDialog(students: List<Student>, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val csv = buildString {
+        appendLine("Student,Roll Number,Status")
+        students.forEach { appendLine("${it.name},${it.roll},${if (it.present) "Present" else "Absent"}") }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = "text/csv"
+                                putExtra(Intent.EXTRA_SUBJECT, "SmartAttend attendance report")
+                                putExtra(Intent.EXTRA_TEXT, csv)
+                            },
+                            "Share attendance CSV"
+                        )
+                    )
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+            ) { Text("Share CSV") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Export attendance", color = Navy) },
+        text = {
+            Column {
+                Text("Your report is ready to share.", color = Color(0xFF627D98))
+                Spacer(Modifier.height(12.dp))
+                Text(csv, color = Navy, fontSize = 11.sp)
+            }
+        }
+    )
 }
