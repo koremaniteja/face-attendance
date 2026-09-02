@@ -109,6 +109,29 @@ private val PaleOrange = Color(0xFFFFF2DE)
 
 data class Student(val name: String, val roll: String, val present: Boolean = false)
 
+private const val STUDENT_PREFS = "smartattend_students"
+private const val STUDENT_LIST = "student_list"
+
+private fun loadStudents(context: android.content.Context): MutableList<Student> {
+    val saved = context.getSharedPreferences(STUDENT_PREFS, android.content.Context.MODE_PRIVATE)
+        .getStringSet(STUDENT_LIST, null)
+    return (saved?.mapNotNull {
+        val parts = it.split("|", limit = 2)
+        if (parts.size == 2) Student(parts[0], parts[1]) else null
+    } ?: listOf(
+        Student("Aarav Sharma", "CS-001", true), Student("Ishita Patel", "CS-002", true),
+        Student("Rohan Mehta", "CS-003"), Student("Meera Nair", "CS-004", true),
+        Student("Kabir Singh", "CS-005"), Student("Ananya Rao", "CS-006", true)
+    )).toMutableList()
+}
+
+private fun saveStudents(context: android.content.Context, students: List<Student>) {
+    context.getSharedPreferences(STUDENT_PREFS, android.content.Context.MODE_PRIVATE)
+        .edit()
+        .putStringSet(STUDENT_LIST, students.map { "${it.name}|${it.roll}" }.toSet())
+        .apply()
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -178,19 +201,15 @@ private enum class Tab(val label: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AttendanceApp(onSignOut: () -> Unit) {
+    val context = LocalContext.current
     var tab by remember { mutableStateOf(Tab.Home) }
     var showScanner by remember { mutableStateOf(false) }
     var showAddClass by remember { mutableStateOf(false) }
     var showSchedule by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     var showExport by remember { mutableStateOf(false) }
-    val students = remember {
-        mutableStateListOf(
-            Student("Aarav Sharma", "CS-001", true), Student("Ishita Patel", "CS-002", true),
-            Student("Rohan Mehta", "CS-003"), Student("Meera Nair", "CS-004", true),
-            Student("Kabir Singh", "CS-005"), Student("Ananya Rao", "CS-006", true)
-        )
-    }
+    var showAddStudent by remember { mutableStateOf(false) }
+    val students = remember { mutableStateListOf<Student>().also { it.addAll(loadStudents(context)) } }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -235,7 +254,7 @@ private fun AttendanceApp(onSignOut: () -> Unit) {
                 onHistory = { showHistory = true }
             )
             Tab.Classes -> ClassesScreen(padding, onAdd = { showAddClass = true })
-            Tab.Students -> StudentsScreen(padding, students)
+            Tab.Students -> StudentsScreen(padding, students, onAdd = { showAddStudent = true })
             Tab.Reports -> ReportsScreen(padding, students, onExport = { showExport = true })
         }
     }
@@ -244,6 +263,14 @@ private fun AttendanceApp(onSignOut: () -> Unit) {
     if (showSchedule) ScheduleDialog { showSchedule = false }
     if (showHistory) HistoryDialog { showHistory = false }
     if (showExport) ExportDialog(students) { showExport = false }
+    if (showAddStudent) AddStudentDialog(
+        onDismiss = { showAddStudent = false },
+        onSave = { student ->
+            students.add(student)
+            saveStudents(context, students)
+            showAddStudent = false
+        }
+    )
 }
 
 @Composable
@@ -401,9 +428,22 @@ private fun ClassesScreen(padding: PaddingValues, onAdd: () -> Unit) {
 }
 
 @Composable
-private fun StudentsScreen(padding: PaddingValues, students: List<Student>) {
+private fun StudentsScreen(padding: PaddingValues, students: List<Student>, onAdd: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(20.dp, padding.calculateTopPadding() + 8.dp, 20.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Students", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("${students.size} enrolled in Data Structures", color = Color(0xFF627D98)); Spacer(Modifier.height(8.dp)) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text("Students", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                    Text("${students.size} enrolled in Data Structures", color = Color(0xFF627D98))
+                }
+                IconButton(onClick = onAdd) {
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(Blue), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Add, "Enroll student", tint = Color.White)
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
         items(students) { student -> Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(42.dp).clip(CircleShape).background(PaleBlue), contentAlignment = Alignment.Center) { Text(student.name.take(1), color = Blue, fontWeight = FontWeight.Bold) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(student.name, color = Navy, fontWeight = FontWeight.SemiBold); Text(student.roll, color = Color(0xFF829AB1), fontSize = 12.sp) }; Text(if (student.present) "Present" else "Absent", color = if (student.present) Green else Orange, fontSize = 12.sp, fontWeight = FontWeight.Bold) } } }
     }
 }
@@ -542,6 +582,39 @@ private fun AddClassDialog(onDismiss: () -> Unit) {
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
         title = { Text("Create new class", color = Navy) },
         text = { OutlinedTextField(name, { name = it }, label = { Text("Class name") }, singleLine = true) }
+    )
+}
+
+@Composable
+private fun AddStudentDialog(onDismiss: () -> Unit, onSave: (Student) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var roll by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = { onSave(Student(name.trim(), roll.trim())) },
+                enabled = name.isNotBlank() && roll.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+            ) { Text("Enroll student") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Enroll a student", color = Navy) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Student details are saved securely on this device.", color = Color(0xFF627D98), fontSize = 12.sp)
+                OutlinedTextField(name, { name = it }, label = { Text("Full name") }, singleLine = true)
+                OutlinedTextField(roll, { roll = it }, label = { Text("Roll number") }, singleLine = true)
+                Row(
+                    Modifier.clip(RoundedCornerShape(10.dp)).background(PaleBlue).padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Face, null, tint = Blue, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Face capture can be added later for identity matching.", color = Navy, fontSize = 11.sp)
+                }
+            }
+        }
     )
 }
 
